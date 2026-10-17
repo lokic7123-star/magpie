@@ -103,7 +103,7 @@ func PluginCheckinOn(s settings.Settings, id string) bool {
 }
 
 func (p pluginCheckinProvider) checkiner(now func() time.Time) checkiner {
-	return checkiner{path: pluginCheckinPath(), now: now, mu: &pluginCheckinMu, by: pluginCheckinBy(p.ID), label: p.ID, accounts: func() []checkinAcct {
+	return checkiner{path: pluginCheckinPath(), recheck: p.ID == "qoder" || p.ID == QoderCNID, now: now, mu: &pluginCheckinMu, by: pluginCheckinBy(p.ID), label: p.ID, accounts: func() []checkinAcct {
 		var out []checkinAcct
 		for _, a := range p.accounts {
 			out = append(out, checkinAcct{User: a.User, On: a.On, key: a.key, provider: a.card, do: a.do})

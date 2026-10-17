@@ -23,7 +23,7 @@ const { test } = require("node:test");
 const { chromium, webkit } = require("playwright");
 const { watchSettingsReads, settingsDrawn } = require("./reader.cjs");
 
-const assets = path.resolve(__dirname, "../assets");
+const assets = process.env.MAGPIE_CHECKIN_ASSETS || path.resolve(__dirname, "../assets");
 const today = new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10);
 const quotas = () => [
   { provider: "workbuddy", name: "WorkBuddy", icon: "workbuddy-color", plan: "Pro", user: "李雷", windows: [{ name: "Credits", used: 8.9 }],
@@ -376,7 +376,17 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       const box = await page.locator("#qoderCheckinRow").boundingBox();
       assert(box.width > 0 && box.x + box.width <= 440, "the row fits at 440px");
       const saved = page.waitForRequest((r) => new URL(r.url()).pathname === "/api/settings" && r.method() === "POST");
-      await page.locator("#qoderCheckinSegs button").nth(1).click();
+      // The Chinese help wraps below the tab at 440px. Bring the actual
+      // switch above the fixed footer with user scrolling, not Playwright's
+      // script scroll which the app intentionally restores.
+      const on = page.locator("#qoderCheckinSegs button").nth(1);
+      for (let i = 0; i < 10; i++) {
+        const r = await on.boundingBox(), foot = await page.locator("footer.foot").boundingBox();
+        if (r.y >= 0 && r.y + r.height < foot.y - 8) break;
+        await page.mouse.wheel(0, 120);
+        await page.waitForTimeout(100);
+      }
+      await on.click();
       await saved;
       assert.deepEqual(asked, [true]);
       assert.deepEqual(errors, []);

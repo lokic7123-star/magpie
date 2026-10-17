@@ -4114,3 +4114,9 @@ input[type="checkbox"]:disabled { opacity: .45; }
 .row.pref .sub.proxy-check { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; }
 .proxy-check[hidden] { display: none; }
 .row.pref .sub.proxy-check.err { color: var(--red); }
+
+/* Keep check-in context and actions visible in the narrow account card. */
+.wb-checkin { flex-wrap: wrap; }
+.wb-checkin .ci-say { flex: 1 1 180px; flex-wrap: wrap; }
+.wb-checkin .ci-say > span { white-space: normal; overflow-wrap: anywhere; }
+.wb-checkin .ci-time { flex-basis: 100%; font-size: 10px; color: var(--muted); }

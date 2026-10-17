@@ -4,6 +4,14 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Next automatic check: around {time}": "下次自动检查：约 {time}",
+    "Waiting for an automatic check; you can check in now": "等待下一次自动检查，也可点击“立即签到”",
+
+    "Already checked in today": "今日此前已领取",
+    "Last checked: {time}": "上次检查：{time}",
+    "Check-in status refreshed": "签到状态已刷新",
+    "Auto check-in runs every 30 minutes; Check in now checks immediately.": "自动签到已开启，通常每 30 分钟检查；点击“立即签到”可马上检查。",
+
     "None": "无",
     "Prompt": "提示词",
     "Request hook": "请求 Hook",
@@ -3700,6 +3708,14 @@ const I18N = {
     "Reading the reply": "读取回复",
   },
   "zh-TW": {
+    "Next automatic check: around {time}": "下次自動檢查：約 {time}",
+    "Waiting for an automatic check; you can check in now": "等待下一次自動檢查，也可點擊「立即簽到」",
+
+    "Already checked in today": "今日先前已領取",
+    "Last checked: {time}": "上次檢查：{time}",
+    "Check-in status refreshed": "簽到狀態已重新整理",
+    "Auto check-in runs every 30 minutes; Check in now checks immediately.": "自動簽到已開啟，通常每 30 分鐘檢查；點擊「立即簽到」可馬上檢查。",
+
     "None": "無",
     "Prompt": "提示詞",
     "Request hook": "請求 Hook",
@@ -7381,6 +7397,14 @@ const I18N = {
     "Reading the reply": "讀取回覆",
   },
   ja: {
+    "Next automatic check: around {time}": "次回の自動確認：約 {time}",
+    "Waiting for an automatic check; you can check in now": "次回の自動確認待ちです。「今すぐチェックイン」も利用できます",
+
+    "Already checked in today": "今日は受領済み",
+    "Last checked: {time}": "最終確認：{time}",
+    "Check-in status refreshed": "チェックイン状態を更新しました",
+    "Auto check-in runs every 30 minutes; Check in now checks immediately.": "自動チェックインは30分ごとに確認します。すぐに確認するには「今すぐチェックイン」を押してください。",
+
     "None": "なし",
     "Prompt": "プロンプト",
     "Request hook": "リクエストフック",
@@ -11064,6 +11088,14 @@ const I18N = {
     "Reading the reply": "応答の読み取り",
   },
   de: {
+    "Next automatic check: around {time}": "Nächste automatische Prüfung: etwa {time}",
+    "Waiting for an automatic check; you can check in now": "Warten auf die nächste automatische Prüfung; Jetzt einchecken ist verfügbar",
+
+    "Already checked in today": "Heute bereits eingecheckt",
+    "Last checked: {time}": "Zuletzt geprüft: {time}",
+    "Check-in status refreshed": "Check-in-Status aktualisiert",
+    "Auto check-in runs every 30 minutes; Check in now checks immediately.": "Automatischer Check-in ist aktiv; Prüfung alle 30 Minuten. Für eine sofortige Prüfung Jetzt einchecken wählen.",
+
     "None": "Keine",
     "Prompt": "Prompt",
     "Request hook": "Anfrage-Hook",

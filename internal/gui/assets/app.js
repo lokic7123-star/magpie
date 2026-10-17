@@ -17250,6 +17250,13 @@ function pluginCheckinOn(id) {
   const inherits = Object.hasOwn(PLUGIN_CHECKIN_INHERITS, id) ? PLUGIN_CHECKIN_INHERITS[id] : "";
   return !!(inherits && prefs?.[inherits]);
 }
+function checkinCurrent(r, today) {
+  return r?.day === today;
+}
+function checkinDue(q, today) {
+  return q.checkins && !q.checkinOff && (!checkinCurrent(q.checkin, today) ||
+    q.checkin.outcome === "failed" || (/^(plugin:)?qoder(-cn)?$/.test(q.checkinBy) && q.checkin.outcome === "inactive"));
+}
 function checkinRow(q, first, subs) {
   const by = q.checkinBy || "";
   const vendor = by.startsWith("plugin:") ? pluginCheckin(by.slice(7), q.name || by.slice(7)) : CHECKINS[by] || CHECKINS[""];
@@ -17260,12 +17267,12 @@ function checkinRow(q, first, subs) {
   row.dataset.feature = "warmups";
   let kind = "", text;
   const last = r && r.day !== today && (r.outcome === "claimed" || r.outcome === "done") ? t("last checked in {day}", { day: r.day }) : "";
-  if (r && r.day === today) {
+  if (checkinCurrent(r, today)) {
     switch (r.outcome) {
       case "claimed":
       case "done":
         kind = "ok";
-        text = t("Checked in today") + (r.credit ? " +" + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
+        text = t(r.outcome === "claimed" ? "Checked in today" : "Already checked in today") + (r.credit ? (r.outcome === "claimed" ? " +" : " · ") + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
         break;
       case "ineligible":
         text = t("Not eligible for the daily check-in");
@@ -17300,6 +17307,16 @@ function checkinRow(q, first, subs) {
   row.dataset.state = kind || "none";
   const say = el("span", "ci-say");
   say.append(el("i", "ci-dot" + (kind ? " " + kind : "")), el("span", "", text));
+  const at = Date.parse(r?.at);
+  if (Number.isFinite(at)) {
+    const time = (n) => new Date(n).toUTCString().replace("GMT", "UTC");
+    const line = (s) => say.append(el("small", "ci-time", s));
+    line(t("Last checked: {time}", { time: time(at) }));
+    if (on && !q.checkinOff && (r.outcome === "failed" || /^(plugin:)?qoder(-cn)?$/.test(by))) {
+      const next = at + 18e5;
+      line(next > Date.now() ? t("Next automatic check: around {time}", { time: time(next) }) : t("Waiting for an automatic check; you can check in now"));
+    }
+  }
   say.title = [t(vendor.say),
     r?.outcome === "failed" || r?.outcome === "ineligible" || r?.outcome === "own-app" ? r.msg : ""].filter(Boolean).join("\n");
   row.append(say);
@@ -17314,7 +17331,7 @@ function checkinRow(q, first, subs) {
     try {
       prefs = await writingPrefs(api("settings/" + vendor.api, vendor.plugin ? { provider: vendor.plugin, on: !on } : { on: !on }));
       state.settings = prefs;
-      status(t(on ? "Daily check-in turned off" : "Daily check-in turned on; magpie checks in within a few minutes"), "ok");
+      status(t(on ? "Daily check-in turned off" : "Auto check-in runs every 30 minutes; Check in now checks immediately."), "ok");
       renderQuotas();
     } catch (err) {
       auto.disabled = false;
@@ -17322,8 +17339,8 @@ function checkinRow(q, first, subs) {
     }
   };
   row.append(auto);
-  // pressed now: shown while an account isn't in today and could be
-  const due = subs.filter((x) => x.checkins && !x.checkinOff && (x.checkinBy || "") === by && !(x.checkin?.day === today && x.checkin.outcome !== "failed"));
+  // Inactive Qoder campaigns remain available for a manual check.
+  const due = subs.filter((x) => (x.checkinBy || "") === by && checkinDue(x, today));
   if (due.length) {
     const now = el("button", "text ci-now", t("Check in now"));
     now.type = "button";
@@ -17335,7 +17352,7 @@ function checkinRow(q, first, subs) {
       try {
         const rs = await api("usage/" + vendor.api, vendor.plugin ? { provider: vendor.plugin } : {});
         const bad = (rs || []).filter((x) => x.outcome === "failed").length;
-        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Checked in"), bad ? "err" : "ok");
+        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Check-in status refreshed"), bad ? "err" : "ok");
       } catch (err) {
         status(err.message, "err");
       }
