@@ -1836,6 +1836,8 @@ async function providers({ proxies } = {}) {
     const models = { ...p.models }
     for (const q of own) for (const [k, m] of Object.entries(q?.models ?? {})) models[k] ??= m
     const ids = (q) => Object.values(q.models).filter((m) => m.status !== "deprecated").map((m) => m.id)
+    const hasBilling = keys.length > 1 && [p, ...own].some(q => Object.values(q?.models ?? {}).some(m => m.free === true || rateOf(m.rate) > 0 || rateOf(m.rateWas) > 0))
+    const billingOf = q => q?.models ? Object.fromEntries(Object.entries(q.models).map(([id, m]) => [id, { free: m.free === true, rate: rateOf(m.rate), rateWas: rateOf(m.rateWas) }])) : undefined
     const first = stored[keys[0]]
     out.push({
       id,
@@ -1861,6 +1863,7 @@ async function providers({ proxies } = {}) {
         type: stored[k]?.type ?? "",
         accountId: whoOf(stored[k]),
         hint: hintOf(stored[k]),
+        billing: hasBilling ? billingOf(i === 0 ? p : own[i - 1]) : undefined,
         models: own.length === 0 ? undefined : i === 0 ? ids(p) : own[i - 1]?.models ? ids(own[i - 1]) : undefined,
         fellBack: i === 0 ? !!p.fellBack : !!(own[i - 1]?.fellBack || own[i - 1]?.failed),
         listError: (i === 0 ? p.fellBack && p.listError : own[i - 1]?.listError) || "",

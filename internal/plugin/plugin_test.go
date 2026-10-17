@@ -18,6 +18,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/yetone/magpie/internal/catalog"
 	"github.com/yetone/magpie/internal/netproxy"
 	"github.com/yetone/magpie/internal/testenv"
 )
@@ -196,6 +197,14 @@ func TestFakePlugin(t *testing.T) {
 // sign-in to an account already there replaces it.
 func TestPluginAccounts(t *testing.T) {
 	sandbox(t)
+	cache := catalog.CachePath()
+	if err := os.MkdirAll(filepath.Dir(cache), 0700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cache, []byte(`{}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+
 	var auths []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		auths = append(auths, r.Header.Get("Authorization"))
@@ -226,7 +235,7 @@ func TestPluginAccounts(t *testing.T) {
 		t.Fatalf("accounts %+v %+v", blue, red)
 	}
 	ps, err := Providers(ctx)
-	if err != nil || len(ps) != 1 || len(ps[0].Accounts) != 2 || ps[0].Accounts[0].AccountID != "blue@fake" || !reflect.DeepEqual(ps[0].Accounts[1], Account{Key: red.Account, Type: "oauth", AccountID: "red@fake", Models: ps[0].Accounts[0].Models}) || len(ps[0].Accounts[1].Models) == 0 {
+	if err != nil || len(ps) != 1 || len(ps[0].Accounts) != 2 || ps[0].Accounts[0].AccountID != "blue@fake" || !reflect.DeepEqual(ps[0].Accounts[1], Account{Key: red.Account, Type: "oauth", AccountID: "red@fake", Models: ps[0].Accounts[0].Models, Billing: map[string]ModelBilling{"fake-1": {Free: true}, "fake-claude": {Rate: 0.5, RateWas: 1}, "fake-gemini": {Rate: 0.03}}}) || len(ps[0].Accounts[1].Models) == 0 {
 		t.Fatalf("Providers = %+v, %v", ps, err)
 	}
 	if c := Cached(); len(c) != 1 || len(c[0].Accounts) != 2 || c[0].Accounts[1].Key != red.Account || c[0].AccountID != "blue@fake" {

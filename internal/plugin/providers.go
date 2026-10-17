@@ -187,6 +187,14 @@ func SetProviderOptions(ctx context.Context) error {
 	return Call(ctx, "setProviderOptions", map[string]any{"options": settings.Load().PluginOptions}, nil)
 }
 
+// ModelBilling is a model's reported billing for one account. Zero fields
+// with Free false mean unknown, not a zero-cost promise for another account.
+type ModelBilling struct {
+	Free    bool    `json:"free"`
+	Rate    float64 `json:"rate"`
+	RateWas float64 `json:"rateWas"`
+}
+
 // Account is one account a provider is signed in to: Key is where
 // plugin-auth.json keeps it (the provider's id, else id#slot).
 type Account struct {
@@ -197,9 +205,10 @@ type Account struct {
 	Hint string `json:"hint,omitempty"`
 	// Models are the ids of the provider's models this account has, when
 	// the provider has more than one account; none, it has them all.
-	Models    []string `json:"models,omitempty"`
-	FellBack  bool     `json:"fellBack,omitempty"`
-	ListError string   `json:"listError,omitempty"`
+	Models    []string                `json:"models,omitempty"`
+	FellBack  bool                    `json:"fellBack,omitempty"`
+	ListError string                  `json:"listError,omitempty"`
+	Billing   map[string]ModelBilling `json:"billing,omitempty"`
 }
 
 var (
@@ -433,6 +442,9 @@ func keepListed(ps, last []Provider) []Provider {
 				continue
 			}
 			for _, b := range l.Accounts {
+				if b.Key == a.Key && !b.FellBack && b.Billing != nil {
+					ps[i].Accounts[j].Billing = b.Billing
+				}
 				if b.Key == a.Key && !b.FellBack && len(b.Models) > 0 {
 					ps[i].Accounts[j].Models, ps[i].Accounts[j].FellBack, ps[i].Accounts[j].ListError = b.Models, false, ""
 				}

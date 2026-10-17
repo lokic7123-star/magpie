@@ -278,10 +278,42 @@ func pluginAccountCatalog(pp plugin.Provider, key string) []catalog.Model {
 	all := pluginCatalog(pp)
 	for _, a := range pp.Accounts {
 		if a.Key == key && a.Models != nil {
+			all = pluginBilling(all, a)
 			return slices.DeleteFunc(all, func(m catalog.Model) bool { return !slices.Contains(a.Models, m.ID) })
 		}
 	}
 	return all
+}
+
+// pluginBilling applies only the selected account's reported rates.
+func pluginBilling(ms []catalog.Model, a plugin.Account) []catalog.Model {
+	for i, m := range ms {
+		if b, ok := a.Billing[m.ID]; ok {
+			ms[i].Free, ms[i].Rate, ms[i].RateWas = b.Free, b.Rate, b.RateWas
+		}
+	}
+	return ms
+}
+
+// AccountModelBilling gives the known account-specific rates by login name.
+func (p Provider) AccountModelBilling() map[string]map[string]plugin.ModelBilling {
+	if !p.IsPlugin() {
+		return nil
+	}
+	pp := *p.Account.plugin
+	if cur, ok := PluginOf(p.ID); ok {
+		pp = cur
+	}
+	var out map[string]map[string]plugin.ModelBilling
+	for _, l := range pluginLogins(pp) {
+		if l.acct.Billing != nil {
+			if out == nil {
+				out = map[string]map[string]plugin.ModelBilling{}
+			}
+			out[strings.ToLower(l.User)] = l.acct.Billing
+		}
+	}
+	return out
 }
 
 // SelectionModels lists the provider's whole catalog for its editor. A plugin
@@ -296,7 +328,13 @@ func (p Provider) SelectionModels() []catalog.Model {
 	if cur, ok := PluginOf(p.ID); ok {
 		pp = cur
 	}
-	return pluginCatalog(pp)
+	all := pluginCatalog(pp)
+	for _, a := range pp.Accounts {
+		if a.Key == p.Account.pluginKey {
+			return pluginBilling(all, a)
+		}
+	}
+	return all
 }
 
 // PluginListError is why the plugin couldn't list the account at key's

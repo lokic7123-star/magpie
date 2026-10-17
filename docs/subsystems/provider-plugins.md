@@ -231,3 +231,16 @@ account may have only a fallback list. Each account's `Available` and
 `pluginLists` remain account-specific for requests; showing a model in the
 editor does not grant another account access to it. Account model restriction
 chips show the same free and credit-rate badges as the provider's chips.
+
+Subscription model chips with neither a free marker nor a positive billing
+rate show Billing unavailable in the provider editor and account restrictions.
+Zero default fields alone do not establish that a model is free. The tooltip
+directs readers to the provider's current pricing; it invents no rate.
+
+When a multi-account plugin reports billing, the host retains a `billing`
+map per account (free, rate, rateWas). Provider model selection and account
+catalogs apply that account's values over the combined list. An unknown first
+account never inherits another account's free marker or price. Failed reads
+retain previously successful billing with the account's cached list. Older
+cached records without billing keep their previous behavior; model ids and
+request eligibility are unchanged.

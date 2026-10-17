@@ -4969,6 +4969,13 @@ function rateTag(rate = 0, was = 0) {
   return tag;
 }
 
+// An account model with no reported billing rate is unknown, not free.
+function unknownBillingTag() {
+  const tag = el("span", "badge", t("Billing unavailable"));
+  tag.title = t("The model list supplies no billing rate. This does not mean free; check the provider's current pricing.");
+  return tag;
+}
+
 // contextTag: the small grey 1M by a model that holds a million tokens or
 // more (Cursor's names said it, and no longer do); the usual 128K–400K
 // aren't marked, as nearly every model has one of those; nor is a name
@@ -10804,6 +10811,7 @@ function renderModels(p) {
       if (free) c.append(el("span", "badge free", t("free")));
       const rate = rateTag(m.rate, m.rateWas);
       if (rate) c.append(rate);
+      else if (p.account && !free) c.append(unknownBillingTag());
       const ctx = contextTag(m.context, m.name);
       if (ctx) c.append(ctx);
       // the number Claude Desktop's menu says beside this model, which it
@@ -13862,7 +13870,9 @@ function accountModels(p, ref, isKey, name) {
   const draw = () => {
     chips.replaceChildren();
     for (const id of ids) {
-      const m = p.models.find((x) => x.id === id);
+      const model = p.models.find((x) => x.id === id);
+      const billing = p.accountBilling ? p.accountBilling[String(ref).toLowerCase()] || {} : null;
+      const m = model && billing ? { ...model, free: false, rate: 0, rateWas: 0, ...billing[id] } : model;
       const on = acctModels.chosen.includes(id);
       const c = el("button", "mchip" + (on ? " on" : ""));
       c.append(el("span", "", m?.name && m.name !== id ? m.name : id));
@@ -13870,6 +13880,7 @@ function accountModels(p, ref, isKey, name) {
       if (m && (m.free || namedFree(m.id, m.name))) c.append(freeBadge(m.free));
       const rate = m && rateTag(m.rate, m.rateWas);
       if (rate) c.append(rate);
+      else if (p.account && m && !m.free && !namedFree(m.id, m.name)) c.append(unknownBillingTag());
       c.onclick = () => { acctModels.chosen = on ? acctModels.chosen.filter((x) => x !== id) : [...acctModels.chosen, id]; draw(); };
       chips.append(c);
     }

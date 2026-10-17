@@ -102,7 +102,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
     const row = (page, id) => page.locator(`.editor .accts .acc[data-account-id="${id}"]`);
     const pill = (page, id) => row(page, id).locator(".amodels");
     const panel = (page, id) => row(page, id).locator(".acct-models");
-    const chips = (page, id) => panel(page, id).locator(".mchip").evaluateAll((cs) => cs.map((c) => `${c.textContent}${c.classList.contains("on") ? "*" : ""}`));
+    const chips = (page, id) => panel(page, id).locator(".mchip").evaluateAll((cs) => cs.map((c) => `${c.querySelector("span").textContent}${c.classList.contains("on") ? "*" : ""}`));
     // what the page and its scrollers have scrolled
     const scrolled = (page) => page.evaluate(() => [window.scrollY, ...[...document.querySelectorAll("*")].filter((e) => e.scrollTop > 0).map((e) => `${e.className}:${e.scrollTop}`)].join(" "));
     // a click that leaves the row where it was and scrolls nothing
@@ -122,6 +122,10 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
 
     test(`${engine} ${lang}: a Codex account is kept for some models, and given all again`, async (t) => {
       const { page, errors, posts } = await open(t, "Codex", ".editor .accts .acc .amodels");
+      await page.waitForFunction(() => {
+        const e = document.querySelector('.acc[data-account-id="Spare@Example.com"] .amodels');
+        return e?.isConnected && getComputedStyle(e).opacity === "1";
+      });
       // the one kept for gpt-6-mini says so, always; the other says All models on hover only
       assert.equal(await pill(page, "Spare@Example.com").textContent(), w.one);
       assert.equal(await pill(page, "Spare@Example.com").getAttribute("title"), w.only);
@@ -136,7 +140,7 @@ for (const engine of (process.env.BROWSER ? [process.env.BROWSER] : ["chromium",
       assert.deepEqual(await chips(page, "me@example.com"), ["gpt-6", "gpt-6-mini"]);
       const save = panel(page, "me@example.com").getByRole("button", { name: w.save, exact: true });
       assert(await save.isDisabled());
-      await still(page, "me@example.com", panel(page, "me@example.com").locator(".mchip", { hasText: /^gpt-6$/ }));
+      await still(page, "me@example.com", panel(page, "me@example.com").locator(".mchip").filter({ has: page.locator("span", { hasText: /^gpt-6$/ }) }));
       assert.deepEqual(await chips(page, "me@example.com"), ["gpt-6*", "gpt-6-mini"]);
       assert(await save.isEnabled());
       let n = posts.length;

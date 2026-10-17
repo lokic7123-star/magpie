@@ -4,6 +4,9 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+    "Billing unavailable": "计费未知",
+    "The model list supplies no billing rate. This does not mean free; check the provider's current pricing.": "模型列表未提供计费信息。这不代表免费；请核对供应商当前定价。",
+
     "None": "无",
     "Prompt": "提示词",
     "Request hook": "请求 Hook",
@@ -3705,6 +3708,9 @@ const I18N = {
     "Reading the reply": "读取回复",
   },
   "zh-TW": {
+    "Billing unavailable": "計費未知",
+    "The model list supplies no billing rate. This does not mean free; check the provider's current pricing.": "模型清單未提供計費資訊。這不代表免費；請核對供應商目前定價。",
+
     "None": "無",
     "Prompt": "提示詞",
     "Request hook": "請求 Hook",
@@ -7391,6 +7397,9 @@ const I18N = {
     "Reading the reply": "讀取回覆",
   },
   ja: {
+    "Billing unavailable": "料金情報なし",
+    "The model list supplies no billing rate. This does not mean free; check the provider's current pricing.": "モデル一覧に料金情報がありません。無料を意味するものではありません。提供元の現在の料金を確認してください。",
+
     "None": "なし",
     "Prompt": "プロンプト",
     "Request hook": "リクエストフック",
@@ -11079,6 +11088,9 @@ const I18N = {
     "Reading the reply": "応答の読み取り",
   },
   de: {
+    "Billing unavailable": "Abrechnung unbekannt",
+    "The model list supplies no billing rate. This does not mean free; check the provider's current pricing.": "Die Modellliste enthält keine Abrechnungsrate. Dies bedeutet nicht kostenlos; prüfen Sie die aktuellen Preise des Anbieters.",
+
     "None": "Keine",
     "Prompt": "Prompt",
     "Request hook": "Anfrage-Hook",
