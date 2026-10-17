@@ -17273,7 +17273,7 @@ function checkinRow(q, first, subs) {
       case "claimed":
       case "done":
         kind = "ok";
-        text = t("Checked in today") + (r.credit ? " +" + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
+        text = t(r.outcome === "claimed" ? "Checked in today" : "Already checked in today") + (r.credit ? (r.outcome === "claimed" ? " +" : " · ") + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
         break;
       case "ineligible":
         text = t("Not eligible for the daily check-in");
@@ -17331,7 +17331,7 @@ function checkinRow(q, first, subs) {
   };
   row.append(auto);
   // pressed now: shown while an account isn't in today and could be
-  const due = subs.filter((x) => x.checkins && !x.checkinOff && (x.checkinBy || "") === by && !(x.checkin?.day === today && x.checkin.outcome !== "failed"));
+  const due = subs.filter((x) => x.checkins && !x.checkinOff && (x.checkinBy || "") === by && (!(x.checkin?.day === today && x.checkin.outcome !== "failed") || (/^(plugin:)?qoder(-cn)?$/.test(x.checkinBy) && x.checkin?.outcome === "inactive")));
   if (due.length) {
     const now = el("button", "text ci-now", t("Check in now"));
     now.type = "button";
@@ -17343,7 +17343,7 @@ function checkinRow(q, first, subs) {
       try {
         const rs = await api("usage/" + vendor.api, vendor.plugin ? { provider: vendor.plugin } : {});
         const bad = (rs || []).filter((x) => x.outcome === "failed").length;
-        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Checked in"), bad ? "err" : "ok");
+        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Check-in status refreshed"), bad ? "err" : "ok");
       } catch (err) {
         status(err.message, "err");
       }

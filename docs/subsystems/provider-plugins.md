@@ -220,3 +220,5 @@ Run the relevant package tests with an isolated home directory. Resolve GOPATH a
 ```
 
 Some migration and gateway plugin tests require Bun on PATH and use local plugin fixtures; they skip when Bun is unavailable. Report any skipped tests and verify the community package separately when its implementation changes.
+
+Native Qoder and Qoder CN check-in hooks retain the legacy campaign policy: an explicit press rechecks immediately and automatic checks recheck after 30 minutes. Other plugins keep daily caching. An inactive Qoder result remains manually checkable; an already completed check-in is displayed separately from a newly claimed reward. No page-side schedule or new hook result field is added.
