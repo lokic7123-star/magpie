@@ -4114,3 +4114,4 @@ input[type="checkbox"]:disabled { opacity: .45; }
 .row.pref .sub.proxy-check { margin-top: 3px; white-space: normal; overflow-wrap: anywhere; }
 .proxy-check[hidden] { display: none; }
 .row.pref .sub.proxy-check.err { color: var(--red); }
+.public-access-note { color: var(--muted); font-size: 11px; padding: 8px 10px; overflow-wrap: anywhere; }

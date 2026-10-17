@@ -1,0 +1,22 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const path=require('node:path');
+const vm=require('node:vm');
+const {chromium,webkit}=require('playwright');
+const assets=path.resolve(__dirname,'../assets');
+const source=fs.readFileSync(path.join(assets,'app.js'),'utf8');
+const helpers=source.includes('function checkinCurrent(')?source.slice(source.indexOf('function checkinCurrent('),source.indexOf('function checkinRow(')):'';
+const row=source.slice(source.indexOf('function checkinRow('),source.indexOf('// checkinVendorName'));
+test('Zen public sign-in enables public access without asking for a private key',async()=>{
+ const start=source.slice(source.indexOf('async function startPluginSignIn('),source.indexOf('// pluginAnswer:'));
+ let calls=[];
+ const ctx={signing:null,renderProviders(){},api:async()=>({}),signInProxyOf:()=>'',t:x=>x,pluginKey:async(_sub,key)=>calls.push(key)};
+ vm.createContext(ctx);vm.runInContext(helpers+start,ctx);
+ await ctx.startPluginSignIn({agent:'opencode-zen-free',pid:'opencode-zen-free',plugin:{methods:[{type:'api'}]}},0);
+ assert.deepEqual(calls,['public'],'public access should not request or store a personal key');
+ calls=[];await ctx.startPluginSignIn({agent:'opencode-zen-free-plugin',pid:'opencode-zen-free',plugin:{methods:[{type:'api'}]}},0);assert.deepEqual(calls,['public'],'canonical plugin identity must also work when its UI id is renamed');
+ calls=[];await ctx.startPluginSignIn({agent:'ordinary-key-plugin',pid:'ordinary-key-plugin',plugin:{methods:[{type:'api'}]}},0);
+ assert.deepEqual(calls,[],'ordinary API key plugins must still ask for their key');
+ assert.equal(ctx.signing.state,'key');
+});

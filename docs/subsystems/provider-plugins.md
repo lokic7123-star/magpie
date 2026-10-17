@@ -220,3 +220,7 @@ Run the relevant package tests with an isolated home directory. Resolve GOPATH a
 ```
 
 Some migration and gateway plugin tests require Bun on PATH and use local plugin fixtures; they skip when Bun is unavailable. Report any skipped tests and verify the community package separately when its implementation changes.
+
+### Zen Free identity
+
+Zen Free exposes one public identity. Its account action adds public access without asking for a personal key. Personal keys belong to the built-in OpenCode Zen key list.

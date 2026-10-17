@@ -11863,6 +11863,7 @@ async function startPluginSignIn(sub, method, inputs = {}, o = {}) {
     }
     if (ms[method].type === "api") {
       signing = { agent: sub.agent, ...keep, state: "key" };
+      if (sub.pid === "opencode-zen-free") return pluginKey(sub, "public");
       return renderProviders();
     }
     const body = { provider: sub.pid, method, inputs };
@@ -12775,8 +12776,14 @@ function renderAccounts(a, p) {
     const add = el("button", "acc add");
     const ic = el("span", "dot");
     ic.append(svg(PLUS, 10, 1.8));
-    add.append(ic, el("span", "n", t(sub.single ? "Sign in to another {name} account" : "Add another {name} account", { name: sub.name })));
-    add.onclick = () => startSignIn(a.agent);
+    const zen = sub.pid === "opencode-zen-free";
+    const enabled = zen && (a.logins || []).length > 0;
+    add.append(ic, el("span", "n", zen ? t(enabled ? "Free access is added" : "Enable free access") : t(sub.single ? "Sign in to another {name} account" : "Add another {name} account", { name: sub.name })));
+    add.onclick = () => enabled ? status(add.title) : startSignIn(a.agent);
+    if (zen) {
+      add.title = t("Zen Free uses public. Add personal keys to OpenCode Zen.");
+      list.append(el("div", "public-access-note", add.title));
+    }
     list.append(add);
     if (sub.importable) {
       const imp = el("button", "acc add");

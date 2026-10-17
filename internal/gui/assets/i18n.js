@@ -4,6 +4,11 @@
 // works. {name} slots are filled by t(str, vars).
 const I18N = {
   zh: {
+
+    "Enable free access": "启用免费访问",
+    "Free access is added": "免费访问已添加",
+    "Zen Free uses public. Add personal keys to OpenCode Zen.": "本插件共用一个 public 凭据。个人 API Key 请添加到内置 OpenCode Zen。",
+
     "None": "无",
     "Prompt": "提示词",
     "Request hook": "请求 Hook",
@@ -3700,6 +3705,11 @@ const I18N = {
     "Reading the reply": "读取回复",
   },
   "zh-TW": {
+
+    "Enable free access": "啟用免費存取",
+    "Free access is added": "免費存取已新增",
+    "Zen Free uses public. Add personal keys to OpenCode Zen.": "本插件共用一個 public 憑證。個人 API Key 請新增至內建 OpenCode Zen。",
+
     "None": "無",
     "Prompt": "提示詞",
     "Request hook": "請求 Hook",
@@ -7381,6 +7391,11 @@ const I18N = {
     "Reading the reply": "讀取回覆",
   },
   ja: {
+
+    "Enable free access": "無料アクセスを有効にする",
+    "Free access is added": "無料アクセスは追加済みです",
+    "Zen Free uses public. Add personal keys to OpenCode Zen.": "このプラグインは共通の public 認証を使います。個人の API キーは内蔵 OpenCode Zen に追加してください。",
+
     "None": "なし",
     "Prompt": "プロンプト",
     "Request hook": "リクエストフック",
@@ -11064,6 +11079,11 @@ const I18N = {
     "Reading the reply": "応答の読み取り",
   },
   de: {
+
+    "Enable free access": "Kostenlosen Zugang aktivieren",
+    "Free access is added": "Kostenloser Zugang ist hinzugefügt",
+    "Zen Free uses public. Add personal keys to OpenCode Zen.": "Dieses Plugin verwendet einen gemeinsamen public-Zugang. Persönliche API-Schlüssel gehören zum integrierten OpenCode Zen.",
+
     "None": "Keine",
     "Prompt": "Prompt",
     "Request hook": "Anfrage-Hook",
