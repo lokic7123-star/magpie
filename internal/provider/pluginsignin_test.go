@@ -228,3 +228,38 @@ func TestPluginAccounts(t *testing.T) {
 		t.Fatalf("shown again with %v, was %v", got, us)
 	}
 }
+
+// Keyless is generic metadata: neither the provider id nor credential is
+// known to the host. Ordinary API methods still reject empty input.
+func TestPluginKeylessSingleIdentity(t *testing.T) {
+	bun := testenv.Bun(t)
+	claudeHome(t)
+	t.Setenv("MAGPIE_BUN", bun)
+	t.Setenv("FAKE_KEYLESS", "1")
+	t.Cleanup(plugin.Settle)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+	defer cancel()
+	abs, _ := filepath.Abs("../plugin/testdata/fake/index.js")
+	if _, err := plugin.Add(ctx, abs); err != nil {
+		t.Fatal(err)
+	}
+	ps, err := plugin.Providers(ctx)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(ps) != 1 || !ps[0].Single || !ps[0].Methods[0].Keyless || ps[0].Methods[1].Keyless {
+		t.Fatalf("keyless metadata lost or leaked to OAuth: %+v", ps)
+	}
+	for _, credential := range []string{"public-fixture", "renewed-fixture"} {
+		if id, err := PluginAPIKey(ctx, "fakeco", 0, map[string]string{"credential": credential}, ""); err != nil || id != "fakeco" {
+			t.Fatalf("keyless sign-in: %q %v", id, err)
+		}
+	}
+	ps, err = plugin.Providers(ctx)
+	if err != nil || len(ps[0].Accounts) != 1 {
+		t.Fatalf("single identity duplicated: %+v %v", ps, err)
+	}
+	if _, err := PluginAPIKey(ctx, "fakeco", 1, nil, ""); err == nil {
+		t.Fatal("OAuth must not accept an empty API key")
+	}
+}

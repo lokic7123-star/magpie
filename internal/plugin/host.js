@@ -1765,6 +1765,7 @@ function methods(auth) {
   return (auth.methods ?? []).map((m) => ({
     type: m.type,
     label: m.label,
+    ...(m.type === "api" && m.keyless === true && typeof m.authorize === "function" ? { keyless: true } : {}),
     ...(m.type === "api" && shown(m.placeholder, 200) ? { placeholder: shown(m.placeholder, 200) } : {}),
   }))
 }
@@ -1844,6 +1845,7 @@ async function providers({ proxies } = {}) {
       npm: p.npm ?? "",
       api: p.api ?? "",
       methods: methods(a.auth),
+      single: a.auth.single === true,
       icon: iconOf(a),
       usage: typeof a.auth.usage === "function",
       checkin: typeof a.auth.checkin === "function",
@@ -1963,6 +1965,7 @@ function save(provider, key, result, inputs, apiKey) {
 
 // signInKey is where a sign-in goes: the account named, else a new one.
 function signInKey(provider, account) {
+  if (authOf(provider).single === true) return accountsOf(readAuth(), provider)[0] ?? provider
   return account && account !== "new" && providerOf(account) === provider ? account : freshKey(provider)
 }
 
