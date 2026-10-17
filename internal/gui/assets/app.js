@@ -13867,6 +13867,9 @@ function accountModels(p, ref, isKey, name) {
       const c = el("button", "mchip" + (on ? " on" : ""));
       c.append(el("span", "", m?.name && m.name !== id ? m.name : id));
       if (m?.name && m.name !== id) c.title = id;
+      if (m && (m.free || namedFree(m.id, m.name))) c.append(freeBadge(m.free));
+      const rate = m && rateTag(m.rate, m.rateWas);
+      if (rate) c.append(rate);
       c.onclick = () => { acctModels.chosen = on ? acctModels.chosen.filter((x) => x !== id) : [...acctModels.chosen, id]; draw(); };
       chips.append(c);
     }

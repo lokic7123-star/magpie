@@ -222,3 +222,12 @@ Run the relevant package tests with an isolated home directory. Resolve GOPATH a
 ```
 
 Some migration and gateway plugin tests require Bun on PATH and use local plugin fixtures; they skip when Bun is unavailable. Report any skipped tests and verify the community package separately when its implementation changes.
+
+### Selecting models across accounts
+
+The provider editor uses `Provider.SelectionModels` to offer the plugin's
+combined catalog, including models listed only by a later account. Its first
+account may have only a fallback list. Each account's `Available` and
+`pluginLists` remain account-specific for requests; showing a model in the
+editor does not grant another account access to it. Account model restriction
+chips show the same free and credit-rate badges as the provider's chips.

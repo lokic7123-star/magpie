@@ -284,6 +284,21 @@ func pluginAccountCatalog(pp plugin.Provider, key string) []catalog.Model {
 	return all
 }
 
+// SelectionModels lists the provider's whole catalog for its editor. A plugin
+// provider is represented by its first account, but selecting models must also
+// offer those listed by its other accounts. Requests still use Available and
+// pluginLists to check each account's own catalog.
+func (p Provider) SelectionModels() []catalog.Model {
+	if !p.IsPlugin() {
+		return p.Available()
+	}
+	pp := *p.Account.plugin
+	if cur, ok := PluginOf(p.ID); ok {
+		pp = cur
+	}
+	return pluginCatalog(pp)
+}
+
 // PluginListError is why the plugin couldn't list the account at key's
 // models, "" when it did or kept the list it had: what it shows instead
 // is its short defaults (Cursor's Auto alone).

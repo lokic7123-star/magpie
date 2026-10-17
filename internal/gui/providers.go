@@ -775,7 +775,7 @@ func providerInfoWith(p provider.Provider, agents []agentUse, desktop map[string
 		}
 		return j
 	}
-	for _, m := range p.Available() {
+	for _, m := range p.SelectionModels() {
 		seen[m.ID] = true
 		out.Models = append(out.Models, named(m, exposed[m.ID]))
 	}
