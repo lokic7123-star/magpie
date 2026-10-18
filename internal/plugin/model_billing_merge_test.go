@@ -68,3 +68,13 @@ func TestFailedAccountBillingKeepsItsLastRead(t *testing.T) {
 		t.Fatal("failed read erased known account rate")
 	}
 }
+
+func TestFailedAccountFromLegacyCacheKeepsUnknownBilling(t *testing.T) {
+	last := []Provider{{ID: "billing-fixture", Spec: "fixture", Accounts: []Account{{Key: "legacy", Models: []string{"shared"}}}}}
+	now := []Provider{{ID: "billing-fixture", Spec: "fixture", Accounts: []Account{{Key: "legacy", FellBack: true}}}}
+	got := keepListed(now, last)
+	account := got[0].Accounts[0]
+	if !slices.Equal(account.Models, []string{"shared"}) || account.Billing != nil {
+		t.Fatalf("legacy cache should keep the list without inventing billing: %+v", account)
+	}
+}

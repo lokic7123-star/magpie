@@ -277,20 +277,27 @@ func pluginPrice(m plugin.Model) (catalog.Price, bool) {
 func pluginAccountCatalog(pp plugin.Provider, key string) []catalog.Model {
 	all := pluginCatalog(pp)
 	for _, a := range pp.Accounts {
-		if a.Key == key && a.Models != nil {
-			all = pluginBilling(all, a)
-			return slices.DeleteFunc(all, func(m catalog.Model) bool { return !slices.Contains(a.Models, m.ID) })
+		if a.Key == key {
+			all = pluginBilling(all, pp, a)
+			if a.Models != nil {
+				all = slices.DeleteFunc(all, func(m catalog.Model) bool { return !slices.Contains(a.Models, m.ID) })
+			}
+			return all
 		}
 	}
 	return all
 }
 
 // pluginBilling applies only the selected account's reported rates.
-func pluginBilling(ms []catalog.Model, a plugin.Account) []catalog.Model {
+func pluginBilling(ms []catalog.Model, pp plugin.Provider, a plugin.Account) []catalog.Model {
+	// Without account billing metadata, preserve the older shared catalog.
+	if !slices.ContainsFunc(pp.Accounts, func(a plugin.Account) bool { return a.Billing != nil }) {
+		return ms
+	}
 	for i, m := range ms {
-		if b, ok := a.Billing[m.ID]; ok {
-			ms[i].Free, ms[i].Rate, ms[i].RateWas = b.Free, b.Rate, b.RateWas
-		}
+		// Missing data is unknown, including a list restored from an old cache.
+		b := a.Billing[m.ID]
+		ms[i].Free, ms[i].Rate, ms[i].RateWas = b.Free, b.Rate, b.RateWas
 	}
 	return ms
 }
@@ -331,7 +338,7 @@ func (p Provider) SelectionModels() []catalog.Model {
 	all := pluginCatalog(pp)
 	for _, a := range pp.Accounts {
 		if a.Key == p.Account.pluginKey {
-			return pluginBilling(all, a)
+			return pluginBilling(all, pp, a)
 		}
 	}
 	return all

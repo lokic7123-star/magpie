@@ -239,8 +239,10 @@ directs readers to the provider's current pricing; it invents no rate.
 
 When a multi-account plugin reports billing, the host retains a `billing`
 map per account (free, rate, rateWas). Provider model selection and account
-catalogs apply that account's values over the combined list. An unknown first
-account never inherits another account's free marker or price. Failed reads
-retain previously successful billing with the account's cached list. Older
-cached records without billing keep their previous behavior; model ids and
-request eligibility are unchanged.
+catalogs apply that account's values over the combined list. When any account
+has billing metadata, a selected account or model missing
+its own values stays unknown, including a failed read restored from an older
+cache. It cannot inherit another account's free marker, rate or previous rate.
+Failed reads retain previously successful billing with the account's cached
+list. When no account has billing metadata, older shared-catalog behavior is
+preserved. Model ids and request eligibility are unchanged.

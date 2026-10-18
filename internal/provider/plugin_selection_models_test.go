@@ -53,3 +53,44 @@ func TestPluginSelectionBillingIsAccountScoped(t *testing.T) {
 		}
 	}
 }
+
+// A failed refresh can restore an older model list without a Billing field.
+// Another account's successful billing must not become this account's price.
+func TestPluginSelectionBillingMissingAccountData(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		billing      map[string]plugin.ModelBilling
+		models       []string
+		otherBilling map[string]plugin.ModelBilling
+		free         bool
+		rate         float64
+	}{
+		{name: "legacy cache", models: []string{"shared", "priced"}, otherBilling: map[string]plugin.ModelBilling{"shared": {Free: true}, "priced": {Rate: 0.9}}},
+		{name: "empty account billing", billing: map[string]plugin.ModelBilling{}, models: []string{"shared", "priced"}, otherBilling: map[string]plugin.ModelBilling{"shared": {Free: true}, "priced": {Rate: 0.9}}},
+		{name: "partial account billing", billing: map[string]plugin.ModelBilling{"priced": {Rate: 0.2}}, models: []string{"shared", "priced"}, otherBilling: map[string]plugin.ModelBilling{"shared": {Free: true}, "priced": {Rate: 0.9}}, rate: 0.2},
+		{name: "unknown list", otherBilling: map[string]plugin.ModelBilling{"shared": {Free: true}, "priced": {Rate: 0.9}}},
+		{name: "all legacy metadata", models: []string{"shared", "priced"}, free: true, rate: 0.9},
+		{name: "known selected account", billing: map[string]plugin.ModelBilling{"shared": {Free: true}, "priced": {Rate: 0.3}}, models: []string{"shared", "priced"}, free: true, rate: 0.3},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			claudeHome(t)
+			t.Setenv("MAGPIE_BUN", "")
+			pp := plugin.Provider{ID: "billing-cache-fixture", Models: []plugin.Model{{ID: "shared", Free: true}, {ID: "priced", Rate: 0.9, RateWas: 1.2}}, Accounts: []plugin.Account{
+				{Key: "known", Models: []string{"shared", "priced"}, Billing: tc.otherBilling},
+				{Key: "selected", Models: tc.models, Billing: tc.billing},
+			}}
+			p := pluginProvider(pp, pluginLogin{acct: pp.Accounts[1]})
+			for _, got := range [][]catalog.Model{p.SelectionModels(), p.Available()} {
+				if len(got) != 2 || got[0].ID != "shared" || got[1].ID != "priced" {
+					t.Fatalf("billing changed the model list: %+v", got)
+				}
+				if got[0].Free != tc.free || got[1].Rate != tc.rate {
+					t.Fatalf("account inherited another account billing: %+v", got)
+				}
+				if (tc.otherBilling != nil || tc.billing != nil) && got[1].RateWas != 0 {
+					t.Fatalf("account inherited another account previous rate: %+v", got[1])
+				}
+			}
+		})
+	}
+}
