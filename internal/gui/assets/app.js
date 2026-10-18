@@ -7454,7 +7454,7 @@ function providerDraftValue() {
 function providerDirty() {
   // Price boxes parse on change; a page closed while typing hasn't blurred one yet.
   const active = document.activeElement;
-  return !!draft && draft === providerDraftRef && (providerDraftValue() !== providerDraftBase ||
+  return accountModelsDirty(providers?.providers.find((p) => p.id === editing)) || !!draft && draft === providerDraftRef && (providerDraftValue() !== providerDraftBase ||
     (active?.matches(".editor .mprice input") && active.value !== active.defaultValue));
 }
 // backdropClick(el, on) says whether a click on el is one on its backdrop:
@@ -7527,7 +7527,7 @@ function confirmDiscard() {
 async function cancelEdit(keep) {
   if ((providerDirty() || ((importing || importingApps) && modalFormDirty())) && !(await confirmDiscard())) return false;
   if (keep !== true) dropSigningIn(editing);
-  editing = null; draft = null; importing = null; importingApps = null; renderProviders();
+  editing = null; draft = null; acctModels = null; importing = null; importingApps = null; renderProviders();
   return true;
 }
 window.addEventListener("beforeunload", (e) => {
@@ -9045,6 +9045,7 @@ function drawEditor(p, presetID) {
     cancel.onclick = cancelEdit;
     const saveBtn = el("button", "text primary", t("Save"));
     saveBtn.onclick = () => {
+      if (holdAccountModels(p)) return;
       const cx = parseContexts(draft.contexts || "");
       if (cx.error) { shown(ed.querySelector("input.contexts"))?.focus({ preventScroll: true }); return editorError(t("Context window: {v} is not a length like 128k or 1m", { v: cx.error }), "warn"); }
       const ox = parseContexts(draft.outputs || "");
@@ -9649,6 +9650,7 @@ function drawEditor(p, presetID) {
   cancel.onclick = cancelEdit;
   const saveBtn = el("button", "text primary", t(isNew ? "Add" : "Save"));
   const save = () => {
+    if (holdAccountModels(p)) return;
     // new: an Add never replaces a provider that has the id already
     const body = { id: p ? slug(draft.id) || p.id : draft.id, from: p?.id, name: draft.name, preset: draft.preset, key: draft.key || "", chat: draft.chat, responses: draft.responses, anthropic: draft.anthropic, gemini: (draft.gemini || "").trim(), catalog: draft.catalog, models: p ? chosenIds() : draft.extra, headers: headersOf(draft.headers), new: isNew };
     if (isNew && draft.copyOf) body.copyOf = draft.copyOf;
@@ -13833,16 +13835,21 @@ async function accountAction(path, body, okMsg, confirmed = false) {
   }
 }
 
-// An account's or key's own models (#474): one of several can be kept for
-// some of the provider's models only — a small allowance kept for the cheap
-// ones — and the gateway never sends it another. Unset, it serves all the
-// provider's, as before. The pill on its row says which it serves; a click
-// opens the provider's models under it as chips, picked and saved apart
-// from the editor's Save. acctModels is the row being picked: { id, ref,
-// chosen }.
+// Account/key choices (#474) save separately. Pending choices block
+// provider Save until saved or canceled.
 let acctModels = null;
 function accountModelsOf(p, ref) { return p.accountModels?.[String(ref).toLowerCase()] || []; }
-// It gives the pill, and the open picker the row ends with, or null.
+function accountModelsDirty(p) {
+  const a = acctModels;
+  if (!a || a.id !== p?.id) return false;
+  const own = accountModelsOf(p, a.ref);
+  return own.length !== a.chosen.length || a.chosen.some((id) => !own.includes(id));
+}
+function holdAccountModels(p) {
+  if (!accountModelsDirty(p)) return false;
+  editorError(t("Save or cancel the account's model selection first."), "warn");
+  return true;
+}
 function accountModels(p, ref, isKey, name) {
   const own = accountModelsOf(p, ref);
   const pill = el("button", "amodels" + (own.length ? " set" : ""), own.length ? t(own.length === 1 ? "1 model" : "{n} models", { n: own.length }) : t("All models"));
@@ -13850,11 +13857,11 @@ function accountModels(p, ref, isKey, name) {
   const open = acctModels?.id === p.id && acctModels.ref === ref;
   pill.classList.toggle("open", open);
   pill.setAttribute("aria-expanded", open ? "true" : "false");
-  pill.onclick = () => { acctModels = open ? null : { id: p.id, ref, chosen: [...own] }; renderProviders(); };
+  pill.onclick = () => { if (holdAccountModels(p)) return; acctModels = open ? null : { id: p.id, ref, chosen: [...own] }; renderProviders(); };
   if (!open) return [pill, null];
   const box = el("div", "acct-models");
   const chips = el("div", "mchips");
-  // the models the provider serves agents, and any the account has that it no longer lists
+  // Include kept models absent from the current catalog.
   const ids = p.models.filter((m) => m.on).map((m) => m.id);
   for (const id of acctModels.chosen) if (!ids.includes(id)) ids.push(id);
   const foot = el("div", "acm-foot");
