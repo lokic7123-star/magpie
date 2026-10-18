@@ -283,3 +283,35 @@ func TestPluginOtherProviderKeepsDailyCache(t *testing.T) {
 		t.Fatalf("ordinary daily provider must keep its settled result; calls=%d", calls)
 	}
 }
+
+func TestPluginQoderCompletedCacheCanClaimOnPress(t *testing.T) {
+	for _, id := range []string{"qoder", QoderCNID} {
+		t.Run(id, func(t *testing.T) {
+			claudeHome(t)
+			t.Cleanup(plugin.Settle)
+			now := time.Date(2026, 10, 18, 4, 0, 0, 0, time.UTC)
+			calls := 0
+			outcome := CheckinDone
+			p := pluginCheckinProvider{ID: id, accounts: []pluginCheckinAcct{{User: "synthetic", On: true, key: id + "|synthetic", card: id, do: func(context.Context) WorkBuddyCheckin {
+				calls++
+				return WorkBuddyCheckin{Outcome: outcome}
+			}}}}
+			check := func(press bool, want string, wantCalls int) {
+				t.Helper()
+				got := p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), press)
+				if len(got) != 1 || got[0].Outcome != want || calls != wantCalls {
+					t.Fatalf("press=%v: got=%+v calls=%d; want outcome=%s calls=%d", press, got, calls, want, wantCalls)
+				}
+			}
+			check(false, CheckinDone, 1)
+			outcome = CheckinClaimed
+			check(true, CheckinClaimed, 2)
+			// The automatic loop must reuse the newly claimed result, so
+			// a manual refresh does not immediately cause another claim.
+			check(false, CheckinClaimed, 2)
+			now = now.Add(31 * time.Minute)
+			outcome = CheckinDone
+			check(false, CheckinDone, 3)
+		})
+	}
+}
