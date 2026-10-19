@@ -42,4 +42,12 @@ This repairs the unusable automatic-compaction default. It does not expand the m
 
 The native SDK replay proves that a sufficiently larger target can carry this history and retain the intended output budget. Actual summary generation and durable commit of the user's existing long conversation have not yet been verified. The inference-call budget was exhausted; a separate one-call, free-model-only acceptance request is pending. No extra call, automatic retry or paid fallback was made.
 
-Current user configuration has removed Space Bunny and enables larger free models. This patch did not restore the removed model. It is a source proposal, not an installed EXE update or a claim of upstream acceptance.
+This patch does not restore removed or disabled models. It is a source proposal, not an installed EXE update or a claim of upstream acceptance.
+
+## Contribution review, 2026-10-19 UTC
+
+- The upstream `internal/agent/dsh.go` blob was still `be8b7223ba12123df81df224b504af52d789e82f` in both v0.1.1293 and the main file read during review, matching the pre-fix file. The proposal is therefore not presented as a fix already released in 1293.
+- Re-ran `go test ./internal/agent -run '^TestDsh' -count=1 -timeout=120s` with a fresh temporary user home and pinned offline dependency caches: passed. An original-implementation Go overlay makes the new full-window and above-window cases fail on the exported output value. No source file or production configuration was replaced by that mutation check.
+- Current DSH upstream documentation explicitly prefers the latest durable request for cache reuse and requires idle admission for `/compact`. Native installed-module checks confirm those behaviors, and an explicit `summarizationProvider`/`summarizationModel` pair overrides the old route as documented. These are not reported as Magpie defects, and this patch does not reorder those priorities or remove busy protection.
+- Related #2823 concerns a 500000 window and 393216 default output. This narrow predicate deliberately does not change that case, because its output is below its window. It provides evidence and a fix for the zero-message-budget boundary of the same export/default mismatch; it must not be described as resolving every overly early compaction case.
+- No additional real model request was made. The previously inconclusive real recovery attempt remains inconclusive. Synthetic summary completion, correct target selection, a source test pass, a released build and successful recovery of a private conversation are separate claims.
