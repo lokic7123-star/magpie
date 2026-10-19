@@ -40,7 +40,7 @@ This repairs the unusable automatic-compaction default. It does not expand the m
 
 ## Remaining acceptance
 
-The native SDK replay proves that a sufficiently larger target can carry this history and retain the intended output budget. Actual summary generation and durable commit of the user's existing long conversation have not yet been verified. The inference-call budget was exhausted; a separate one-call, free-model-only acceptance request is pending. No extra call, automatic retry or paid fallback was made.
+The native SDK replay proves that a sufficiently larger target can carry this history and retain the intended output budget. A separately authorized free-model-only recovery attempt ended at a local 280-second deadline without a completed summary. Its send counter was not persisted on termination, so the actual upstream request count is unknown with an upper bound of one. This is not evidence of a vendor-side timeout. That allowance is treated as consumed; no further model request, automatic retry or paid fallback was made. Actual summary generation and durable recovery of the existing conversation remain unverified. This submission is limited to the export-default fix and its isolated acceptance.
 
 This patch does not restore removed or disabled models. It is a source proposal, not an installed EXE update or a claim of upstream acceptance.
 
