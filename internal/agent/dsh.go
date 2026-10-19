@@ -1500,6 +1500,18 @@ func dshLevels(ref string) []string {
 	return nil
 }
 
+// dshMaxTokens is a request default, not just catalog metadata: dsh reserves
+// it before deciding when to compact. A vendor's full-window output ceiling
+// must not leave that calculation with no message budget. Keep explicit user
+// limits and ordinary catalog ceilings; trim only this unusable default.
+func dshMaxTokens(m catalog.Model) int {
+	out := maxTokens(m)
+	if !m.OutputSet && m.Context > 0 && out >= m.Context {
+		return min(out, 65536, max(1, m.Context/4))
+	}
+	return out
+}
+
 // dshRouteConfig is magpie's first route with every one of models on it.
 func dshRouteConfig(models []catalog.Model, api, gw string) dshPiRoute {
 	return dshKindConfig(dshKinds[0], models, api, gw)
@@ -1518,7 +1530,7 @@ func dshKindConfig(k dshKind, models []catalog.Model, api, gw string) dshPiRoute
 	for _, m := range models {
 		e := dshPiModel{ID: m.ID, Name: m.Name, ContextWindow: m.Context}
 		if m.Output > 0 {
-			e.MaxTokens = maxTokens(m)
+			e.MaxTokens = dshMaxTokens(m)
 		}
 		switch {
 		case m.Images:
@@ -1604,7 +1616,7 @@ func dshProviderLines(effort string, models []catalog.Model, gw string) []string
 			lines = append(lines, fmt.Sprintf("        contextWindow: %d", m.Context))
 		}
 		if m.Output > 0 {
-			lines = append(lines, fmt.Sprintf("        maxTokens: %d", maxTokens(m)))
+			lines = append(lines, fmt.Sprintf("        maxTokens: %d", dshMaxTokens(m)))
 		}
 		if m.Images {
 			lines = append(lines, "        inputModalities: [text, image]")
