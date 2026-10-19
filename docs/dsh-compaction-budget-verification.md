@@ -35,6 +35,8 @@ This repairs the unusable automatic-compaction default. It does not expand the m
 - The regression covers every generated protocol route, the legacy writer, ordinary ceilings, explicit overrides and unknown capacity metadata.
 - An additional whole-agent-package run was interrupted after a prolonged silent run; it is not counted as passing. No full-repository result is claimed.
 - Original session replay and installed-budget evaluation made zero inference requests and did not mutate a user session or production configuration.
+- A second check loaded the installed DSH modules directly through its Electron Node mode, without copied function bodies or the older source checkout. The original history passed through the real BasicCompactionEngine summarizer, PiAiAdapter and SDK to a local fake upstream. The old window actually sent max output 1 and reproduced the exact MAX_TOKENS / incomplete-checkpoint error; the larger-window control actually sent 65536 and produced a complete summary block. Both outcomes are asserted.
+- `internal/agent/testdata/dsh-compaction-replay.mjs` provides this independent installed-DSH check with public synthetic history by default. Set `DSH_APP_ASAR` to the installed app.asar and run the script with that app executable in `ELECTRON_RUN_AS_NODE=1` mode. Optional `--events` consumes an already-decoded event-prefix JSON array on stdin, only in memory; do not publish private event files. The check has no real vendor/model call and does not persist a session.
 
 ## Remaining acceptance
 
