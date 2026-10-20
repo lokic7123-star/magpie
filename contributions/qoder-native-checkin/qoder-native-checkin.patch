@@ -1,0 +1,295 @@
+From b1cb3359d5e2ff4b3954eb44dea51cc66409868b Mon Sep 17 00:00:00 2001
+From: LoKi <317300729+lokic7123-star@users.noreply.github.com>
+Date: Tue, 20 Oct 2026 10:30:35 +0000
+Subject: [PATCH] fix(checkin): restore Qoder plugin campaign rechecks
+
+---
+ docs/subsystems/provider-plugins.md           |  2 +
+ internal/gui/assets/app.js                    |  8 +-
+ internal/gui/assets/i18n.js                   |  8 ++
+ .../gui/tests/qoder-checkin-recheck.test.cjs  | 48 ++++++++++
+ internal/provider/plugin_checkin.go           |  2 +-
+ internal/provider/plugin_checkin_test.go      | 91 +++++++++++++++++++
+ 6 files changed, 153 insertions(+), 6 deletions(-)
+ create mode 100644 internal/gui/tests/qoder-checkin-recheck.test.cjs
+
+diff --git a/docs/subsystems/provider-plugins.md b/docs/subsystems/provider-plugins.md
+index b6cfbf4..c9ff7db 100644
+--- a/docs/subsystems/provider-plugins.md
++++ b/docs/subsystems/provider-plugins.md
+@@ -224,3 +224,5 @@ Run the relevant package tests with an isolated home directory. Resolve GOPATH a
+ ```
+ 
+ Some migration and gateway plugin tests require Bun on PATH and use local plugin fixtures; they skip when Bun is unavailable. Report any skipped tests and verify the community package separately when its implementation changes.
++
++Native Qoder and Qoder CN check-in hooks retain the legacy campaign policy: an explicit press rechecks immediately and automatic checks recheck after 30 minutes. Other plugins keep daily caching. An inactive Qoder result remains manually checkable; an already completed check-in is displayed separately from a newly claimed reward. No page-side schedule or new hook result field is added.
+diff --git a/internal/gui/assets/app.js b/internal/gui/assets/app.js
+index 7db524b..1a25f49 100644
+--- a/internal/gui/assets/app.js
++++ b/internal/gui/assets/app.js
+@@ -17420,7 +17420,7 @@ function checkinRow(q, first, subs) {
+       case "claimed":
+       case "done":
+         kind = "ok";
+-        text = t("Checked in today") + (r.credit ? " +" + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
++        text = t(r.outcome === "claimed" ? "Checked in today" : "Already checked in today") + (r.credit ? (r.outcome === "claimed" ? " +" : " · ") + r.credit : "") + (r.streak ? " · " + t("{n}-day streak", { n: r.streak }) : "");
+         break;
+       case "ineligible":
+         text = t("Not eligible for the daily check-in");
+@@ -17477,9 +17477,7 @@ function checkinRow(q, first, subs) {
+     }
+   };
+   row.append(auto);
+-  // pressed now: shown while an account isn't in today and could be
+-  const due = subs.filter((x) => x.checkins && !x.checkinOff && (x.checkinBy || "") === by && !(x.checkin?.day === today && x.checkin.outcome !== "failed"));
+-  if (due.length) {
++  if (subs.some((x) => x.checkins && !x.checkinOff && (x.checkinBy || "") === by && (x.checkin?.day !== today || x.checkin.outcome === "failed" || (/^(plugin:)?qoder(-cn)?$/.test(by) && x.checkin.outcome === "inactive")))) {
+     const now = el("button", "text ci-now", t("Check in now"));
+     now.type = "button";
+     now.title = t("Press 签到 now for the accounts not checked in today");
+@@ -17490,7 +17488,7 @@ function checkinRow(q, first, subs) {
+       try {
+         const rs = await api("usage/" + vendor.api, vendor.plugin ? { provider: vendor.plugin } : {});
+         const bad = (rs || []).filter((x) => x.outcome === "failed").length;
+-        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Checked in"), bad ? "err" : "ok");
++        status(bad ? t("Check-in failed for {n} account(s)", { n: bad }) : t("Check-in status refreshed"), bad ? "err" : "ok");
+       } catch (err) {
+         status(err.message, "err");
+       }
+diff --git a/internal/gui/assets/i18n.js b/internal/gui/assets/i18n.js
+index 91e56fb..65866cb 100644
+--- a/internal/gui/assets/i18n.js
++++ b/internal/gui/assets/i18n.js
+@@ -1088,6 +1088,7 @@ const I18N = {
+     "{user}: no check-in event now": "{user}：当前没有签到活动",
+     "{user} couldn't check in, tried again later": "{user} 签到失败，稍后重试",
+     "Checked in today": "今日已签到",
++    "Already checked in today": "今日此前已领取",
+     "last checked in {day}": "上次签到于 {day}",
+     "Not eligible for the daily check-in": "不符合签到条件",
+     "No check-in event now": "当前没有签到活动",
+@@ -1133,6 +1134,7 @@ const I18N = {
+     "As claiming the daily credits in Qoder does": "和在 Qoder 里领取每日积分一样",
+     "Check-in failed for {n} account(s)": "{n} 个账号签到失败",
+     "Checked in": "已签到",
++    "Check-in status refreshed": "签到状态已刷新",
+     "Emails, phone numbers, ID and bank card numbers too": "邮箱、手机号、身份证号和银行卡号也一并脱敏",
+     "Social Security numbers": "美国社会安全号",
+     "US SSNs, in the ranges that are given out": "美国 SSN，只认实际会发放的号段",
+@@ -4834,6 +4836,7 @@ const I18N = {
+     "{user}: no check-in event now": "{user}：目前沒有簽到活動",
+     "{user} couldn't check in, tried again later": "{user} 簽到失敗，稍後重試",
+     "Checked in today": "今日已簽到",
++    "Already checked in today": "今日先前已領取",
+     "last checked in {day}": "上次簽到於 {day}",
+     "Not eligible for the daily check-in": "不符合簽到條件",
+     "No check-in event now": "目前沒有簽到活動",
+@@ -4879,6 +4882,7 @@ const I18N = {
+     "As claiming the daily credits in Qoder does": "和在 Qoder 裡領取每日積分一樣",
+     "Check-in failed for {n} account(s)": "{n} 個帳號簽到失敗",
+     "Checked in": "已簽到",
++    "Check-in status refreshed": "簽到狀態已重新整理",
+     "Emails, phone numbers, ID and bank card numbers too": "郵箱、手機號、身份證號和銀行卡號也一併脫敏",
+     "Social Security numbers": "美國社會安全碼",
+     "US SSNs, in the ranges that are given out": "美國 SSN，只認實際會發放的號段",
+@@ -8550,6 +8554,7 @@ const I18N = {
+     "{user}: no check-in event now": "{user}：現在チェックインイベントはありません",
+     "{user} couldn't check in, tried again later": "{user} はチェックインできませんでした。後で再試行します",
+     "Checked in today": "今日はチェックイン済み",
++    "Already checked in today": "今日は受領済み",
+     "last checked in {day}": "最終チェックイン {day}",
+     "Not eligible for the daily check-in": "毎日のチェックインの対象外です",
+     "No check-in event now": "現在チェックインイベントはありません",
+@@ -8595,6 +8600,7 @@ const I18N = {
+     "As claiming the daily credits in Qoder does": "Qoder で毎日のクレジットを受け取るのと同じです",
+     "Check-in failed for {n} account(s)": "{n} 件のアカウントでチェックインに失敗しました",
+     "Checked in": "チェックイン済み",
++    "Check-in status refreshed": "チェックイン状態を更新しました",
+     "Emails, phone numbers, ID and bank card numbers too": "メールアドレス、電話番号、ID 番号、銀行カード番号もマスクします",
+     "Social Security numbers": "社会保障番号",
+     "US SSNs, in the ranges that are given out": "米国の SSN。実際に発行される範囲のものだけ",
+@@ -12296,6 +12302,7 @@ const I18N = {
+     "{user}: no check-in event now": "{user}: derzeit keine Check-in-Aktion",
+     "{user} couldn't check in, tried again later": "{user} konnte nicht einchecken, später erneut versucht",
+     "Checked in today": "Heute eingecheckt",
++    "Already checked in today": "Heute bereits eingecheckt",
+     "last checked in {day}": "zuletzt eingecheckt {day}",
+     "Not eligible for the daily check-in": "Nicht berechtigt für den täglichen Check-in",
+     "No check-in event now": "Derzeit keine Check-in-Aktion",
+@@ -12341,6 +12348,7 @@ const I18N = {
+     "As claiming the daily credits in Qoder does": "Wie das Abholen der täglichen Credits in Qoder",
+     "Check-in failed for {n} account(s)": "Check-in für {n} Konto/Konten fehlgeschlagen",
+     "Checked in": "Eingecheckt",
++    "Check-in status refreshed": "Check-in-Status aktualisiert",
+     "Emails, phone numbers, ID and bank card numbers too": "Auch E-Mail-Adressen, Telefonnummern, Ausweis- und Bankkartennummern",
+     "Social Security numbers": "Sozialversicherungsnummern",
+     "US SSNs, in the ranges that are given out": "US-SSNs, nur in den Bereichen, die vergeben werden",
+diff --git a/internal/gui/tests/qoder-checkin-recheck.test.cjs b/internal/gui/tests/qoder-checkin-recheck.test.cjs
+new file mode 100644
+index 0000000..9fd3758
+--- /dev/null
++++ b/internal/gui/tests/qoder-checkin-recheck.test.cjs
+@@ -0,0 +1,48 @@
++const {test}=require('node:test');
++const assert=require('node:assert/strict');
++const fs=require('node:fs/promises');
++const path=require('node:path');
++const {chromium,webkit}=require('playwright');
++const assets=path.resolve(__dirname,'../assets');
++const today=()=>new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
++for(const [engine,browserType] of Object.entries({chromium,webkit}))for(const lang of ['en','zh','zh-TW','ja','de']){
++ test(`${engine} ${lang}: inactive Qoder is manually checkable; prior rewards stay prior`,async(t)=>{
++  const browser=await browserType.launch({headless:true});t.after(()=>browser.close());
++  const page=await browser.newPage({viewport:{width:900,height:900},reducedMotion:'reduce'});
++  const asked=[],errors=[];page.on('pageerror',e=>errors.push(e.message));
++  const settings={lang,theme:'light',qoderCheckin:true,workbuddyCheckin:true,pluginCheckins:{'qoder-cn':true}};
++  const make=(provider,name,by,outcome,credit)=>({provider,name,user:name,plan:'Pro',windows:[{name:'Credits',used:1}],checkins:true,checkinBy:by,checkin:{day:today(),outcome,credit}});
++  const cards=[make('qoder','Qoder live','qoder','inactive'),make('plugin:qoder-cn','Qoder CN plugin','plugin:qoder-cn','inactive'),make('workbuddy','WorkBuddy prior','','done',50),make('workbuddy-ai','WorkBuddy new','','claimed',100)];
++  await page.route('**/*',async route=>{
++   const u=new URL(route.request().url()),json=data=>route.fulfill({json:data});
++   if(u.pathname==='/boot.js')return route.fulfill({contentType:'text/javascript',body:`window.bootPrefs=${JSON.stringify({lang,theme:'light',web:true})}`});
++   if(u.pathname==='/wails/runtime.js')return route.fulfill({contentType:'text/javascript',body:'export const Window = {};'});
++   if(u.pathname==='/api/state')return json({agents:[],profiles:[],settings});
++   if(u.pathname==='/api/settings')return json(settings);
++   if(u.pathname==='/api/providers')return json({providers:[],presets:[],plugins:[],excluded:[],gateway:{running:true,window:true}});
++   if(u.pathname==='/api/usage/quotas')return json(cards);
++   if(u.pathname==='/api/usage/qoder-checkin'){asked.push('qoder');return json([{outcome:'done'}]);}
++   if(u.pathname==='/api/groups')return json({groups:[],models:[]});
++   if(u.pathname==='/api/plugins')return json({plugins:[]});
++   if(u.pathname.startsWith('/api/'))return json({});
++   const file=path.join(assets,u.pathname==='/'?'index.html':u.pathname);
++   try{return route.fulfill({body:await fs.readFile(file),contentType:{'.html':'text/html','.js':'text/javascript','.css':'text/css','.svg':'image/svg+xml'}[path.extname(file)]});}catch{return route.fulfill({status:404,body:''});}
++  });
++  await page.goto('http://magpie.test/?view=usage');
++  const qoder=page.locator('.subscription-card',{hasText:'Qoder live'});
++  await qoder.locator('.ci-now').waitFor();
++  assert.equal(await page.locator('.subscription-card',{hasText:'Qoder CN plugin'}).locator('.ci-now').count(),1);
++  const prior=page.locator('.subscription-card',{hasText:'WorkBuddy prior'});
++  assert.doesNotMatch(await prior.locator('.ci-say').innerText(),/\+50/);
++  assert.match(await page.locator('.subscription-card',{hasText:'WorkBuddy new'}).locator('.ci-say').innerText(),/\+100/);
++  assert.equal(await prior.locator('.ci-now').count(),0);
++  if(lang==='en'){
++   assert.match(await prior.locator('.ci-say').innerText(),/Already checked in today/);
++   await qoder.locator('.ci-now').click();
++   await page.getByText('Check-in status refreshed',{exact:true}).waitFor();
++   assert.deepEqual(asked,['qoder']);
++  }
++  for(const width of [440,900]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
++  assert.deepEqual(errors,[]);
++ });
++}
+diff --git a/internal/provider/plugin_checkin.go b/internal/provider/plugin_checkin.go
+index 41bae04..85bf4ab 100644
+--- a/internal/provider/plugin_checkin.go
++++ b/internal/provider/plugin_checkin.go
+@@ -103,7 +103,7 @@ func PluginCheckinOn(s settings.Settings, id string) bool {
+ }
+ 
+ func (p pluginCheckinProvider) checkiner(now func() time.Time) checkiner {
+-	return checkiner{path: pluginCheckinPath(), now: now, mu: &pluginCheckinMu, by: pluginCheckinBy(p.ID), label: p.ID, accounts: func() []checkinAcct {
++	return checkiner{path: pluginCheckinPath(), recheck: p.ID == "qoder" || p.ID == QoderCNID, now: now, mu: &pluginCheckinMu, by: pluginCheckinBy(p.ID), label: p.ID, accounts: func() []checkinAcct {
+ 		var out []checkinAcct
+ 		for _, a := range p.accounts {
+ 			out = append(out, checkinAcct{User: a.User, On: a.On, key: a.key, provider: a.card, do: a.do})
+diff --git a/internal/provider/plugin_checkin_test.go b/internal/provider/plugin_checkin_test.go
+index 804e817..2a1989a 100644
+--- a/internal/provider/plugin_checkin_test.go
++++ b/internal/provider/plugin_checkin_test.go
+@@ -224,3 +224,94 @@ func TestPluginCheckinTakesOverTheVendors(t *testing.T) {
+ 		}
+ 	}
+ }
++
++func TestPluginQoderPressAndIntervalRecheck(t *testing.T) {
++	for _, id := range []string{"qoder", QoderCNID} {
++		t.Run(id, func(t *testing.T) {
++			claudeHome(t)
++			t.Cleanup(plugin.Settle)
++			now := time.Date(2026, 10, 17, 4, 0, 0, 0, time.UTC)
++			calls := 0
++			outcome := CheckinInactive
++			p := pluginCheckinProvider{ID: id, accounts: []pluginCheckinAcct{{User: "synthetic", On: true, key: "qoder|synthetic", card: "qoder", do: func(context.Context) WorkBuddyCheckin {
++				calls++
++				return WorkBuddyCheckin{Outcome: outcome}
++			}}}}
++			check := func() {
++				t.Helper()
++				p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), false)
++			}
++			check()
++			p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), true)
++			if calls != 2 {
++				t.Fatalf("manual Qoder check must ask now instead of reusing inactive cache; calls=%d", calls)
++			}
++			now = now.Add(31 * time.Minute)
++			outcome = CheckinDone
++			check()
++			if calls != 3 {
++				t.Fatalf("inactive Qoder must recheck after 30 minutes; calls=%d", calls)
++			}
++			now = now.Add(6 * time.Minute)
++			check()
++			if calls != 3 {
++				t.Fatalf("current completion was rechecked too soon; calls=%d", calls)
++			}
++			now = now.Add(25 * time.Minute)
++			check()
++			if calls != 4 {
++				t.Fatalf("completed result must refresh after 30 minutes; calls=%d", calls)
++			}
++
++		})
++	}
++}
++
++func TestPluginOtherProviderKeepsDailyCache(t *testing.T) {
++	claudeHome(t)
++	t.Cleanup(plugin.Settle)
++	now := time.Date(2026, 10, 17, 4, 0, 0, 0, time.UTC)
++	calls := 0
++	p := pluginCheckinProvider{ID: "daily-fixture", accounts: []pluginCheckinAcct{{User: "synthetic", On: true, key: "daily-fixture|synthetic", card: "daily-fixture", do: func(context.Context) WorkBuddyCheckin {
++		calls++
++		return WorkBuddyCheckin{Outcome: CheckinInactive}
++	}}}}
++	p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), false)
++	now = now.Add(31 * time.Minute)
++	p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), true)
++	if calls != 1 {
++		t.Fatalf("ordinary daily provider must keep its settled result; calls=%d", calls)
++	}
++}
++
++func TestPluginQoderCompletedCacheCanClaimOnPress(t *testing.T) {
++	for _, id := range []string{"qoder", QoderCNID} {
++		t.Run(id, func(t *testing.T) {
++			claudeHome(t)
++			t.Cleanup(plugin.Settle)
++			now := time.Date(2026, 10, 18, 4, 0, 0, 0, time.UTC)
++			calls := 0
++			outcome := CheckinDone
++			p := pluginCheckinProvider{ID: id, accounts: []pluginCheckinAcct{{User: "synthetic", On: true, key: id + "|synthetic", card: id, do: func(context.Context) WorkBuddyCheckin {
++				calls++
++				return WorkBuddyCheckin{Outcome: outcome}
++			}}}}
++			check := func(press bool, want string, wantCalls int) {
++				t.Helper()
++				got := p.checkiner(func() time.Time { return now }).checkinNow(context.Background(), press)
++				if len(got) != 1 || got[0].Outcome != want || calls != wantCalls {
++					t.Fatalf("press=%v: got=%+v calls=%d; want outcome=%s calls=%d", press, got, calls, want, wantCalls)
++				}
++			}
++			check(false, CheckinDone, 1)
++			outcome = CheckinClaimed
++			check(true, CheckinClaimed, 2)
++			// The automatic loop must reuse the newly claimed result, so
++			// a manual refresh does not immediately cause another claim.
++			check(false, CheckinClaimed, 2)
++			now = now.Add(31 * time.Minute)
++			outcome = CheckinDone
++			check(false, CheckinDone, 3)
++		})
++	}
++}
+-- 
+2.55.0.windows.5
+
